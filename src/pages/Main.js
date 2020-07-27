@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Image, View, Text, TextInput, TouchableOpacity, Keyboard } from 'react-native';
+import { StyleSheet, Image, View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import MapView, { Marker, Callout } from 'react-native-maps';
 import { requestPermissionsAsync, getCurrentPositionAsync } from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -11,7 +11,9 @@ function Main({ navigation })
     const [devs, setDevs] = useState([]);
     const [currentRegion, setCurrentRegion] = useState(null);
     const [techs, setTechs] = useState('');
+
     useEffect(() => {
+
         async function loadInitialPosition()
         {
             const { granted } = await requestPermissionsAsync();
@@ -32,10 +34,31 @@ function Main({ navigation })
             }
         }
 
-        loadInitialPosition();
+        async function loadDevs()
+        {
+            try {
+
+                const response = await api.get('/devs');
+
+                setDevs(response.data);
+
+                loadInitialPosition();
+
+            } catch (error) {
+                
+                alertMessages("Falha na conexão", "Não foi possível conectar ao servidor de dados.", [
+                    { text: "Recarregar", onPress: () => loadDevs() },
+                    { text: "Cancelar", onPress: () => console.log(error), style: "cancel" }
+                ], false);
+
+            }
+        }
+
+        loadDevs();
+
     }, []);
 
-    async function loadDevs()
+    async function searchDevs()
     {
         const { latitude, longitude } = currentRegion;
 
@@ -57,6 +80,11 @@ function Main({ navigation })
 
     if (! currentRegion) {
         return null;
+    }
+
+    async function alertMessages(title, message, buttons, cancelable)
+    {
+        Alert.alert(title, message, buttons, { cancelable: cancelable });
     }
 
     return (
@@ -100,7 +128,7 @@ function Main({ navigation })
                     value={techs}
                     onChangeText={setTechs}
                 />
-                <TouchableOpacity onPress={loadDevs} style={styles.loadButton}>
+                <TouchableOpacity onPress={searchDevs} style={styles.loadButton}>
                     <MaterialIcons name="my-location" size={20} color="#fff"/>
                 </TouchableOpacity>
             </View>
